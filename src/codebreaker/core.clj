@@ -47,24 +47,58 @@
   :fn (fn [{{secret :secret} :args ret :ret}]
         (<= (apply + (vals ret)) (count secret))))
 
-(s/fdef exact-matches
+;; re-use this spec for both exact-matches and all-matches functions
+(s/fdef matches-count
   :args ::secret-and-guess
   :ret nat-int?
   :fn (fn [{{secret :secret} :args ret :ret}]
         (<= ret (count secret)))
   )
 
-(defn exact-matches [secret guess]
-  (count (filter true? (map = secret guess))))
 
-;; Define a basic score function that we can test against
+;; ------------ Public functions ------------
+
+(defn exact-matches [secret guess]
+  (count (filter true? (map = secret guess)))
+  )
+
+(defn all-matches [secret guess]
+  (apply + (vals (merge-with min (select-keys (frequencies secret) guess)
+                                 (select-keys (frequencies guess) secret))))
+  )
+
 (defn score [secret guess]
-  {::exact-matches (exact-matches secret guess)
+  (let [exact (exact-matches secret guess)
+        all   (all-matches secret guess)]
+    {::exact-matches exact
+     ::loose-matches (- all exact)})
+  )
+
+(defn foo [secret guess]
+  {::exact-matches 0
    ::loose-matches 0})
 
 (comment
 
-  ;; Now lets exercise the exact-matches function...
-  ;(s/exercise-fn 'codebreaker.core/exact-matches 2)
-  => [[([:c :w :b :g] [:w :w :b :c]) 2]]
+  ;; If we are sharing the matches-count spec between two functions, you must
+  ;; explicitly pass in the spec to the exercise function as it won't have
+  ;; an exact name match between defn and s/fdef.
+  ; (s/exercise-fn 'codebreaker.core/exact-matches 2 (s/get-spec 'codebreaker.core/matches-count))
+  ; => ([([:b :w :y :b :b] [:b :g :w :g :y]) 1] [([:g :r :y :y :w] [:r :r :c :y :c]) 2])
+
+  ;; You can instrument a method, then exercise it to reveal errors
+  ;(stest/instrument 'codebreaker.core/exact-matches {:spec {'codebreaker.core/exact-matches (s/get-spec 'codebreaker.core/matches-count)}})
+  ;=> [codebreaker.core/exact-matches]
+  ;(s/exercise-fn 'codebreaker.core/score)
+
+  ;; We can summarize the auto-test results for our score function
+  ;(stest/summarize-results (stest/check 'codebreaker.core/score))
+  ;{:sym codebreaker.core/score}
+  ;=> {:total 1, :check-passed 1}
+
+  ;; If you include these summary results in a traditional clojure.test files like this:
+  ;#(= (:total %) (:check-passed %))
+  ;;; or
+  ;#(not (contains? % :check-failed))
+
   )
