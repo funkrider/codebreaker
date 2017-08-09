@@ -3,33 +3,56 @@
             [clojure.spec.gen.alpha :as gen]
             [clojure.spec.test.alpha :as stest]))
 
-;; clojure.spec requires clojure >= 1.9.0 (currently alpha)
-;;  and clojure.spec.test depends upon test.check for various methods including exercise.
-;; For leiningen your project.clj must include these dependencies
-;; :dependencies [[org.clojure/clojure "1.9.0-alpha17"]
-;;  [org.clojure/test.check "0.9.0"]]
+(comment
+  ;Problem
+  ;
+  ;We want a function that accepts a secret code and a guess, and returns a score for that
+  ;guess. Codes are made of 4 to 6 colored pegs, selected from six
+  ;colors: [r]ed, [y]ellow, [g]reen, [c]yan, [b]lack, and [w]hite.
+  ;The score is based on the number of pegs in the guess that match the secret code.
+  ;A peg in the guess that matches the color of the peg in the same position in the secret
+  ;code is considered an exact match, and a peg that matches a peg in a different position
+  ;in the secret code is considered a loose match.
+  ;
+  ;For example, if the secret code is [:r :y :g :c] and the guess is [:c :y :g :b], the
+  ;score would be {:codebreaker/exact-matches 2 :codebreaker/loose-matches 1}
+  ;because :y and :g appear in the same positions and :c appears in a different position.
+  ;
+  ;We want to invoke this fn with two codes and get back a map like the one above, e.g.
+  ;
+  ;(score [:r :y :g :c] [:c :y :g :r])
+  ;;; {:codebreaker/exact-matches 2
+  ;;;  :codebreaker/loose-matches 2}
+  )
 
-;; def a simple set with keywords for use as a spec validator
 (def peg? #{:y :g :r :c :w :b})
 
-;; use spec/def to create a spec that defines a collection
-;; of keywords that belong to the set defined in peg?
 (s/def ::code (s/coll-of peg? :min-count 4 :max-count 6))
 
-;; use spec fdef to create a spec that defines a function "score"
-;; that accepts a vector of two arguments of type defined in ::code.
-;; Give the two args identifiers :secret and :guess. Input is "conformed" to these
-;; keywords so you can refer to them in further spec definitions
-;; and in invalid exception explanations.
+;; Define spec definitions for the desired return values
+(s/def ::exact-matches nat-int?)
+(s/def ::loose-matches nat-int?)
+
+;; Update the score spec to include a fn key that counts the input
+;; arguments from secret and then verifies that output total is less than
+;; or equal to that
 (s/fdef score
   :args (s/and (s/cat :secret ::code :guess ::code)
           (fn [{:keys [secret guess]}]
-            (= (count secret) (count guess)))))
+            (= (count secret) (count guess))))
+  :ret (s/keys :req [::exact-matches ::loose-matches])
+  :fn (fn [{{secret :secret} :args ret :ret}]
+        (<= (apply + (vals ret)) (count secret))))
+
+;; Define a basic score function that we can test against
+(defn score [secret guess]
+  {::exact-matches 0
+   ::loose-matches 0})
 
 (comment
 
-  ;; Now when we generate args the secret and guess are of equal length
-  (s/exercise (:args (s/get-spec 'codebreaker.core/score)) 2)
-  => ([([:c :g :r :w] [:w :b :y :g]) {:secret [:c :g :r :w], :guess [:w :b :y :g]}]
-       [([:g :g :c :c :y :w] [:b :b :y :b :y :g]) {:secret [:g :g :c :c :y :w], :guess [:b :b :y :b :y :g]}])
+  ;; Now lets exercise the function itself - still seems good
+  (s/exercise-fn 'codebreaker.core/score 2)
+  => ([([:b :c :g :b :y] [:r :c :w :g :y]) #:codebreaker.core{:exact-matches 0, :loose-matches 0}]
+       [([:c :r :c :c :b] [:g :g :c :g :r]) #:codebreaker.core{:exact-matches 0, :loose-matches 0}])
   )
