@@ -33,26 +33,38 @@
 (s/def ::exact-matches nat-int?)
 (s/def ::loose-matches nat-int?)
 
+(s/def ::secret-and-guess
+  (s/and (s/cat :secret ::code :guess ::code)
+    (fn [{:keys [secret guess]}]
+      (= (count secret) (count guess)))))
+
 ;; Update the score spec to include a fn key that counts the input
 ;; arguments from secret and then verifies that output total is less than
 ;; or equal to that
 (s/fdef score
-  :args (s/and (s/cat :secret ::code :guess ::code)
-          (fn [{:keys [secret guess]}]
-            (= (count secret) (count guess))))
+  :args ::secret-and-guess
   :ret (s/keys :req [::exact-matches ::loose-matches])
   :fn (fn [{{secret :secret} :args ret :ret}]
         (<= (apply + (vals ret)) (count secret))))
 
+(s/fdef exact-matches
+  :args ::secret-and-guess
+  :ret nat-int?
+  :fn (fn [{{secret :secret} :args ret :ret}]
+        (<= ret (count secret)))
+  )
+
+(defn exact-matches [secret guess]
+  (count (filter true? (map = secret guess))))
+
 ;; Define a basic score function that we can test against
 (defn score [secret guess]
-  {::exact-matches (count (filter true? (map = secret guess)))
+  {::exact-matches (exact-matches secret guess)
    ::loose-matches 0})
 
 (comment
 
-  ;; Now lets exercise the function again to see if exact match calculation works...
-  (s/exercise-fn 'codebreaker.core/score 2)
-  => ([[([:b :w :y :c :g :r] [:r :b :y :b :w :b]) #:codebreaker.core{:exact-matches 1, :loose-matches 0}]
-       [([:y :g :c :y :c :b] [:b :c :c :g :c :b]) #:codebreaker.core{:exact-matches 3, :loose-matches 0}]])
+  ;; Now lets exercise the exact-matches function...
+  ;(s/exercise-fn 'codebreaker.core/exact-matches 2)
+  => [[([:c :w :b :g] [:w :w :b :c]) 2]]
   )
