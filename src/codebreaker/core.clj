@@ -46,13 +46,13 @@
 
 ;; Define a basic score function that we can test against
 (defn score [secret guess]
-  {::exact-matches 0
+  {::exact-matches (count (filter true? (map = secret guess)))
    ::loose-matches 0})
 
 (comment
 
-  ;; Now lets exercise the function itself - still seems good
+  ;; Now lets exercise the function again to see if exact match calculation works...
   (s/exercise-fn 'codebreaker.core/score 2)
-  => ([([:b :c :g :b :y] [:r :c :w :g :y]) #:codebreaker.core{:exact-matches 0, :loose-matches 0}]
-       [([:c :r :c :c :b] [:g :g :c :g :r]) #:codebreaker.core{:exact-matches 0, :loose-matches 0}])
+  => ([[([:b :w :y :c :g :r] [:r :b :y :b :w :b]) #:codebreaker.core{:exact-matches 1, :loose-matches 0}]
+       [([:y :g :c :y :c :b] [:b :c :c :g :c :b]) #:codebreaker.core{:exact-matches 3, :loose-matches 0}]])
   )
