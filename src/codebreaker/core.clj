@@ -22,20 +22,14 @@
 ;; keywords so you can refer to them in further spec definitions
 ;; and in invalid exception explanations.
 (s/fdef score
-  :args (s/cat :secret ::code :guess ::code))
+  :args (s/and (s/cat :secret ::code :guess ::code)
+          (fn [{:keys [secret guess]}]
+            (= (count secret) (count guess)))))
 
 (comment
 
-  ;; You can retrieve the spec object using s/get-spec for the function score
-  ;; and then get the args spec from it using the keyword :args
-  ;; If you apply a sample input [[:y :y :g :r] [:b :w :c :g]] to this :args spec
-  ;; if will be "conformed" to the map below using the keywords :secret and :guess.
-  (s/conform (:args (s/get-spec 'codebreaker.core/score)) [[:y :y :g :r] [:b :w :c :g]])
-  => {:secret [:y :y :g :r], :guess [:b :w :c :g]}
-
-  ;; Generate some sample input and view the output from the spec using s/exercise
+  ;; Now when we generate args the secret and guess are of equal length
   (s/exercise (:args (s/get-spec 'codebreaker.core/score)) 2)
-  => ([([:c :g :c :c :c :c] [:b :w :c :g]) {:secret [:c :g :c :c :c :c], :guess [:b :w :c :g]}]
-    [([:g :w :g :w] [:r :g :w :c :c :r]) {:secret [:g :w :g :w], :guess [:r :g :w :c :c :r]}])
-
+  => ([([:c :g :r :w] [:w :b :y :g]) {:secret [:c :g :r :w], :guess [:w :b :y :g]}]
+       [([:g :g :c :c :y :w] [:b :b :y :b :y :g]) {:secret [:g :g :c :c :y :w], :guess [:b :b :y :b :y :g]}])
   )
