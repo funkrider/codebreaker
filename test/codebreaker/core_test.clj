@@ -15,8 +15,8 @@
 
 (comment
 
-  ; There is a but in Leiningen test runner that throws an error when you try
-  ; to summarise generated results. Fix isto run the tests in code first... or add
+  ; There is a bug in Leiningen test runner that throws an error when you try
+  ; to summarise generated results. Fix is to run the tests in code first... or add
   ; :monkeypatch-clojure-test false to project.clj
   ; https://github.com/technomancy/leiningen/issues/2173
 
